@@ -1,0 +1,62 @@
+gui_bridge:dev 녹화 영상 HTTP 서버 통합 요청
+
+현재 상황
+- GUI는 녹화 영상 목록을 Jetson의 HTTP API에서 가져옵니다.
+- GUI가 호출하는 기본 주소는 다음과 같습니다.
+  http://192.168.3.143:8090/api/videos
+- 현재 녹화 영상 파일은 Jetson의 다음 경로에 저장됩니다.
+  /home/lig/Desktop/video
+- 별도로 아래 명령을 실행하면 GUI 녹화 영상 목록에는 정상적으로 영상이 표시됩니다.
+  RECORDING_DIR=/home/lig/Desktop/video RECORDING_HTTP_PORT=8090 bash ./run_recording_video_server.sh
+- 즉, 문제는 GUI 쪽 목록 기능 자체가 아니라 gui_bridge:dev 실행 시 녹화 HTTP 서버가 같이 켜지지 않는 것입니다.
+
+요청 사항
+- gui_bridge:dev 컨테이너가 시작될 때 녹화 영상 HTTP 서버도 함께 실행되도록 수정해 주세요.
+- 최종적으로 gui_bridge:dev 안에서 다음 프로세스들이 같이 떠 있으면 됩니다.
+  1. gui_bridge_node
+  2. mode_manager_node
+  3. recording_video_server.py, 8090/tcp
+
+권장 수정 방법
+- gui_bridge_pkg의 launch 파일에서 recording_video_server.py를 ExecuteProcess로 함께 실행하는 방식을 권장합니다.
+- 예시 개념은 다음과 같습니다.
+
+  from launch.actions import ExecuteProcess
+
+  ExecuteProcess(
+      cmd=[
+          'python3',
+          '/ros2_ws/recording_video_server.py'
+      ],
+      additional_env={
+          'RECORDING_DIR': '/home/lig/Desktop/video',
+          'RECORDING_HTTP_PORT': '8090',
+      },
+      output='screen'
+  )
+
+필수 조건
+- recording_video_server.py가 gui_bridge:dev 컨테이너 안에 존재해야 합니다.
+- /home/lig/Desktop/video 경로가 컨테이너 안에서도 접근 가능해야 합니다.
+- 컨테이너는 PC GUI에서 192.168.3.143:8090으로 접근 가능하도록 host network 또는 equivalent network 설정이어야 합니다.
+- 8090 포트가 다른 프로세스와 충돌하지 않아야 합니다.
+
+정상 동작 확인 방법
+- Jetson에서 다음 명령으로 8090 서버가 떠 있는지 확인합니다.
+  sudo ss -ltnp | grep ':8090'
+
+- Jetson 내부에서 API가 응답하는지 확인합니다.
+  curl http://127.0.0.1:8090/api/videos
+
+- PC GUI 또는 Windows PowerShell에서 다음 주소가 응답하는지 확인합니다.
+  Invoke-WebRequest http://192.168.3.143:8090/api/videos
+
+기대 결과
+- gui_bridge:dev 컨테이너만 실행해도 녹화 영상 HTTP 서버가 자동으로 켜집니다.
+- GUI의 녹화 영상 목록 버튼을 누르면 별도 수동 서버 실행 없이 /home/lig/Desktop/video 아래 영상들이 목록에 표시됩니다.
+
+주의 사항
+- 6000/6001 UDP는 실시간 EO/IR 영상 포트입니다.
+- 8000/8001 UDP는 모터 명령/상태 포트입니다.
+- 녹화 영상 목록/재생은 8090 TCP HTTP 서버를 사용합니다.
+- 따라서 녹화 목록 문제는 6000/6001 영상 UDP 포트 문제가 아니라 8090 HTTP 서버 실행 여부와 녹화 폴더 mount 문제가 핵심입니다.

@@ -1,0 +1,51 @@
+<!--
+    애플리케이션 공통 리소스 파일이다.
+    Material Design 기본 테마, 앱 전체 색상 브러시, 배경 그라데이션처럼 모든 화면에서 공유하는 스타일 값을 정의한다.
+    실제 다크/라이트 색상 전환은 App.xaml.cs에서 이 브러시 값을 교체하는 방식으로 동작한다.
+-->
+<Application x:Class="BroadcastControl.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Material Design 기본 테마 리소스 로드 -->
+                <materialDesign:BundledTheme BaseTheme="Dark"
+                                             PrimaryColor="Teal"
+                                             SecondaryColor="Amber" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- 앱 전체 공통 색상 리소스.
+                 App.xaml.cs에서 다크/라이트 테마 전환 시 함께 교체. -->
+            <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF161B24" />
+            <SolidColorBrush x:Key="PanelBrush" Color="#FF242A35" />
+            <SolidColorBrush x:Key="PanelBorderBrush" Color="#FF464E5D" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#FFE09A36" />
+            <SolidColorBrush x:Key="DangerBrush" Color="#FFFF6B6B" />
+            <SolidColorBrush x:Key="WarningBrush" Color="#FFE5B057" />
+            <SolidColorBrush x:Key="SuccessBrush" Color="#FF64C59A" />
+            <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFF0F3F8" />
+            <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FFC7CDD8" />
+            <SolidColorBrush x:Key="SurfaceAltBrush" Color="#FF0C1018" />
+            <SolidColorBrush x:Key="OverlayPanelBrush" Color="#DD111722" />
+            <SolidColorBrush x:Key="DrawerBrush" Color="#FF202631" />
+            <SolidColorBrush x:Key="DrawerBorderBrush" Color="#FF465061" />
+            <SolidColorBrush x:Key="DrawerTextBrush" Color="#FFF0F3F8" />
+            <SolidColorBrush x:Key="DrawerItemBrush" Color="#FF2C3442" />
+            <SolidColorBrush x:Key="DrawerItemBorderBrush" Color="#FF4A5567" />
+            <SolidColorBrush x:Key="TopBarButtonBrush" Color="#FF2E3643" />
+            <SolidColorBrush x:Key="TopBarButtonHoverBrush" Color="#FF394353" />
+            <SolidColorBrush x:Key="TopBarButtonPressedBrush" Color="#FF465164" />
+
+            <!-- 화면 최하단 배경 그라데이션.-->
+            <LinearGradientBrush x:Key="WindowBackdropBrush" StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Offset="0" Color="#FF1C2230" />
+                <GradientStop Offset="0.08" Color="#FF1A2742" />
+                <GradientStop Offset="0.16" Color="#FF141A25" />
+                <GradientStop Offset="1" Color="#FF161B24" />
+            </LinearGradientBrush>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

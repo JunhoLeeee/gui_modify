@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="BroadcastControl.App/BroadcastControl.App.csproj" />
+  <Project Path="BroadcastControl.UdpBenchmark/BroadcastControl.UdpBenchmark.csproj" />
+</Solution>

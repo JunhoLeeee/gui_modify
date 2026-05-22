@@ -1,0 +1,16 @@
+{
+  "JetsonHost": "192.168.3.143",
+  "PcGuiHost": "192.168.1.94",
+  "JetsonRecordingDir": "/home/lig/Desktop/video",
+  "EoUdpPort": 6000,
+  "IrUdpPort": 6001,
+  "DetectionUdpPort": 6002,
+  "VlmResultPort": 6003,
+  "MotorControlPort": 8000,
+  "TrackingRecordingControlPort": 8010,
+  "MotorStatusPort": 8001,
+  "MobileAlertPort": 8088,
+  "RecordingHttpPort": 8090,
+  "RecordingSegmentSeconds": 60,
+  "RecordedVideoUrl": "http://192.168.3.143:8090/"
+}
