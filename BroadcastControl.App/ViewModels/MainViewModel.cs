@@ -1762,7 +1762,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         // GUI의 현재 제어 상태를 Jetson이 기대하는 10B 모터 명령 패킷으로 변환한다.
         return _motorControlService.TrySendMotorCommandPacket(
             mode: forcedMode ?? (IsManualMode ? (byte)1 : (byte)0),
-            tracking: ShouldSendTrackingToZybo ? (byte)1 : (byte)0,
+            tracking: IsTrackingModeEnabled ? (byte)1 : (byte)0,
             trackId: EncodeTrackId(),
             btnMask: buttons,
             panPos: _motorPanRaw,
