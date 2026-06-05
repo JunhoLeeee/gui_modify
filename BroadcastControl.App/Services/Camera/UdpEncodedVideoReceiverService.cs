@@ -1,7 +1,4 @@
-// Jetson bridge가 보내는 EO/IR 영상 UDP 패킷을 수신하고 디코딩하는 서비스 파일이다.
-// 영상 JPEG fragment를 조립하고, 같은 포트로 들어오는 detection/status 패킷을 파싱해 MainWindow 이벤트로 전달한다.
-// GUI 내부 녹화 기능을 위해 현재 표시 상태의 영상 프레임을 OpenCV VideoWriter로 저장하는 기능도 포함한다.
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -10,10 +7,13 @@ using System.Text;
 using System.Text.Json;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using BroadcastControl.App.Models.Camera;
 using OpenCvSharp;
 
 namespace BroadcastControl.App.Services;
 
+// EO/IR 영상 UDP 포트를 열어 JPEG 청크를 조립하고, 탐지/상태/재생 메타데이터 패킷을 함께 해석합니다.
+// 조립된 프레임은 CameraView에 표시되고, 탐지 결과는 바운딩 박스와 YOLO Targets 리스트에 사용됩니다.
 public sealed class UdpEncodedVideoReceiverService : IDisposable
 {
     private const int DefaultPort = 6000;
@@ -96,8 +96,7 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
 
         try
         {
-            // Windows GUI는 EO/IR 포트를 각각 열고 Jetson bridge가 보내는 UDP 패킷을 기다린다.
-            // ReceiveBufferSize를 크게 잡아 짧은 시간에 여러 JPEG 청크가 몰려도 손실 가능성을 줄인다.
+            // 지정 포트에 UDP 수신 소켓을 열고 큰 JPEG 프레임을 받을 수 있도록 버퍼를 넉넉하게 잡습니다.
             ListeningPort = port;
             _udpClient = new UdpClient();
             _udpClient.Client.ExclusiveAddressUse = false;
@@ -230,8 +229,7 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
 
     private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
     {
-        // UDP 수신은 UI 스레드를 막으면 안 되므로 백그라운드 Task에서 계속 돌린다.
-        // 실제 UI 갱신은 Dispatcher를 통해 안전하게 메인 스레드로 넘긴다.
+        // 백그라운드에서 UDP 패킷을 계속 읽고 패킷 종류별 처리 함수로 넘깁니다.
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -273,9 +271,7 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
                 : $"{remoteEndPoint.Address}:{remoteEndPoint.Port}";
             PublishDiagnosticMessage($"MEVA UDP 첫 패킷을 수신했습니다. 송신지: {sourceText}, 패킷 크기: {packet.Length} bytes");
         }
-
-        // 패킷 종류는 magic/type으로 구분한다.
-        // 오래된 IMGF/DETS 포맷과 현재 SNTL 포맷을 함께 지원해 실험 중 포맷 변경에도 GUI가 바로 죽지 않게 한다.
+        // 메타데이터, 탐지 결과, YOLO 상태, 영상 프래그먼트를 순서대로 판별합니다.
         if (TryExtractMetadataPacket(packet, out var segmentInfo))
         {
             _metadataPacketCount++;
@@ -383,7 +379,7 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
                 if (_decodeFailureCount == 1 || _decodeFailureCount % 20 == 0)
                 {
                     PublishDiagnosticMessage(
-                        $"MEVA UDP JPEG 패킷은 도착했지만 화면 디코딩에 실패했습니다. 실패 횟수: {_decodeFailureCount}, 최근 패킷 크기: {packet.Length} bytes");
+                        $"MEVA UDP JPEG 패킷이 도착했지만 화면 디코딩에 실패했습니다. 실패 횟수: {_decodeFailureCount}, 최근 패킷 크기: {packet.Length} bytes");
                 }
             }
 
@@ -462,7 +458,6 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
     {
         try
         {
-            // bridge는 대역폭을 줄이기 위해 프레임을 JPEG로 보내므로 OpenCV로 먼저 Mat로 복원한다.
             using var decoded = Cv2.ImDecode(encodedFrame, ImreadModes.Color);
             if (decoded.Empty())
             {
@@ -473,8 +468,6 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
                 (decoded.Width != declaredWidth || decoded.Height != declaredHeight))
             {
             }
-
-            // IR 화면은 옵션에 따라 grayscale 원본을 false color로 바꿔 온도 차이가 더 잘 보이게 한다.
             using var falseColorFrame = _applyIrFalseColor ? CreateIrFalseColorFrame(decoded) : new Mat();
             var displaySource = _applyIrFalseColor ? falseColorFrame : decoded;
 
@@ -521,7 +514,6 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
                 declaredWidth > 0 ? declaredWidth : checked((ushort)decoded.Width),
                 declaredHeight > 0 ? declaredHeight : checked((ushort)decoded.Height),
                 bitmap);
-            // 수신 속도가 UI 갱신 속도보다 빠를 수 있으므로 가장 최신 프레임만 큐에 남긴다.
             QueueLatestFrame(receivedFrame);
             return true;
         }
@@ -1013,9 +1005,6 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
     private static bool TryExtractSentinelImageFragmentPacket(byte[] packet, out ImageFragmentPacket fragment)
     {
         fragment = default;
-
-        // SNTL 영상 패킷은 15B 헤더 뒤에 JPEG 조각이 붙는다.
-        // frame_id, chunk_idx, total_chunks를 이용해 한 장의 JPEG로 다시 합친다.
         if (!HasPacketMagic(packet, SentinelPacketMagic) || packet.Length < SentinelImageHeaderSize)
         {
             return false;
@@ -1060,8 +1049,6 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
 
         lock (_fragmentLock)
         {
-            // UDP는 순서 보장과 재전송이 없기 때문에 청크를 잠시 보관했다가 모두 모였을 때만 디코딩한다.
-            // 오래된 조각은 CleanupStaleImageFragments에서 제거해 메모리가 계속 늘어나는 것을 막는다.
             CleanupStaleImageFragments();
             var key = new FrameFragmentKey(fragment.StampNs, fragment.FrameIndex);
             if (!_imageFragments.TryGetValue(key, out var buffer) || !buffer.IsCompatibleWith(fragment))
@@ -1175,7 +1162,7 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
         detectionPacket = default;
 
         if (!HasPacketMagic(packet, SentinelPacketMagic) ||
-            packet.Length < SentinelDetectionHeaderSize + 2 ||
+            packet.Length < SentinelDetectionHeaderSize + 3 ||
             packet[4] is not (0x10 or 0x11))
         {
             return false;
@@ -1196,6 +1183,9 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
                 return false;
             }
 
+            var activeTrackId = packet[offset];
+            offset += 1;
+
             if (packet.Length == offset + firstCount * SentinelTrackedDetectionRecordSize)
             {
                 for (var index = 0; index < firstCount; index++)
@@ -1208,7 +1198,7 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
                     detections.Add(detection);
                 }
 
-                detectionPacket = new DetectionPacket(stampNs, frameId, 0, 0, detections, stream);
+                detectionPacket = new DetectionPacket(stampNs, frameId, 0, 0, detections, stream, activeTrackId);
                 return true;
             }
 
@@ -1245,7 +1235,7 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
                 detections.Add(detection);
             }
 
-            detectionPacket = new DetectionPacket(stampNs, frameId, 0, 0, detections, stream);
+            detectionPacket = new DetectionPacket(stampNs, frameId, 0, 0, detections, stream, activeTrackId);
             return true;
         }
         catch

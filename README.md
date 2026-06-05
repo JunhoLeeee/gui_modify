@@ -1,126 +1,187 @@
 # LIG DNA GUI
 
-LIG DNA GUI는 Windows WPF 기반 운용통제 화면과 Jetson ROS2 브릿지를 함께 사용하는 EO/IR 감시 GUI입니다.
+Windows WPF 기반 EO/IR 감시 GUI입니다. Jetson/ROS2 `gui_bridge`에서 들어오는 EO/IR 영상, YOLO 탐지 결과, 모터 상태, 녹화 영상 목록을 표시하고, GUI에서 선택한 모터/추적 명령을 Jetson으로 전송합니다.
 
-GUI는 Jetson의 ROS2 토픽을 직접 구독하지 않습니다. Jetson에서 실행되는 브릿지가 ROS2 토픽을 UDP 패킷으로 변환해 PC GUI로 보내고, GUI는 영상, 탐지 결과, VLM 결과, 모터 상태를 받아 화면에 표시합니다.
-
-## 현재 운용 구조
+## 전체 통신 흐름
 
 ```text
-Camera / Zybo
-  -> Jetson ROS2 nodes
-  -> gui_bridge:dev 또는 camera bridge
-  -> PC GUI UDP ports
-  -> BroadcastControl.App
+EO/IR Camera, YOLO, Motor
+        |
+        v
+Jetson / ROS2 / gui_bridge
+        |
+        |  UDP 6000  : EO JPEG 영상
+        |  UDP 6001  : IR JPEG 영상
+        |  UDP 6002  : EO/IR YOLO 탐지 결과
+        |  UDP 8001  : 모터 상태
+        |  HTTP 8090 : 녹화 영상 목록/다운로드
+        v
+BroadcastControl.App
+        |
+        |  UDP 8000  : GUI 모터/추적 명령
+        v
+Jetson / ROS2 Motor Control
 ```
 
-GUI에서 Jetson 브릿지를 SSH로 자동 실행하는 기능은 제거했습니다. Network Settings에는 Jetson IP와 PC IP만 남겨 두고, 브릿지 컨테이너 실행과 종료는 Jetson에서 별도로 관리합니다.
+## MVVM 아키텍처
 
-## 주요 구성
+`MainWindow`가 전체 화면 틀을 만들고, `Views` 폴더의 세부 View가 각 영역 UI를 그립니다. 화면에 표시할 데이터와 버튼 명령은 `MainViewModel`을 통해 바인딩됩니다. `MainViewModel`은 기능별 ViewModel을 소유하고, 각 기능별 ViewModel은 자기 기능에 필요한 Service를 소유합니다.
+
+```mermaid
+flowchart LR
+    MainView["MainWindow / MainView"] --> Views["세부 View<br/>Camera, Motor, Monitoring, Operation, Recording, Settings"]
+    Views <-->|Binding / Command / UI Event| MainVM["MainViewModel"]
+
+    MainVM --> CameraVM["CameraViewModel"]
+    MainVM --> MotorVM["MotorControlViewModel"]
+    MainVM --> MonitoringVM["MonitoringViewModel"]
+    MainVM --> OperationVM["OperationControlViewModel"]
+    MainVM --> RecordingVM["RecordingViewModel"]
+
+    CameraVM --> CameraSvc["Camera Services<br/>영상/탐지 UDP 수신"]
+    MotorVM --> MotorSvc["Motor Services<br/>명령 송신/상태 수신"]
+    RecordingVM --> RecordingSvc["Recording Services<br/>화면 녹화/영상 목록"]
+    MainVM --> NetworkModel["Network Model<br/>AppNetworkSettings"]
+
+    CameraSvc --> CameraModel["Camera Models<br/>VideoFrame, DetectionPacket"]
+    MotorSvc --> MotorModel["Motor Models<br/>MotorStatus, ButtonMask"]
+    MotorSvc <-->|UDP| Jetson["Jetson / gui_bridge"]
+    CameraSvc <-->|UDP| Jetson
+    RecordingSvc <-->|HTTP| Jetson
+```
+
+## Binding / Subscribe / Update / Command
+
+| 흐름 | 위치 | 설명 |
+| --- | --- | --- |
+| Binding | `Views/*.xaml` -> `MainViewModel` | 화면 텍스트, 이미지, 상태, 리스트, 버튼 활성 여부를 표시합니다. |
+| Subscribe | 기능별 ViewModel의 Service | 카메라 영상, YOLO 탐지 결과, 모터 상태 수신 서비스를 실행합니다. |
+| Update | `MainViewModel`과 기능별 ViewModel | 수신한 Model 데이터를 화면 표시용 속성으로 바꾸고 `PropertyChanged`로 View를 갱신합니다. |
+| Command | View 버튼/키 입력 -> ViewModel/Service | 모터 이동, Motor Speed 변경, 녹화, 네트워크 설정 저장, 테마/언어 변경을 처리합니다. |
+| Link | `MainWindow.xaml`, `MainViewModel` | 세부 View를 화면에 올리고 세부 ViewModel과 Service 계층을 연결합니다. |
+
+## 주요 폴더
 
 | 경로 | 역할 |
 | --- | --- |
-| `BroadcastControl.App` | Windows WPF GUI |
-| `JetsonThor.RosCameraBridge` | Jetson 카메라 UDP 브릿지 실행 스크립트와 Python 브릿지 |
-| `BroadcastControl.UdpBenchmark` | UDP 수신 성능 확인용 도구 |
-| `docs` | 구조와 운용 관련 보조 문서 |
+| `BroadcastControl.App/Views` | 기능별 WPF UserControl 화면 |
+| `BroadcastControl.App/ViewModels` | 화면 상태, Command, 기능별 Service 소유 계층 |
+| `BroadcastControl.App/Models` | UDP/HTTP/설정/상태 데이터 구조 |
+| `BroadcastControl.App/Services` | 영상 수신, 모터 통신, 녹화, 네트워크 처리 |
+| `BroadcastControl.App/Infrastructure` | 공통 WPF 유틸리티 |
+| `JetsonThor.RosCameraBridge` | Jetson ROS2 데이터를 GUI UDP/HTTP로 변환하는 브릿지 |
+| `BroadcastControl.UdpBenchmark` | UDP 수신 성능 확인 도구 |
 
-## 네트워크 포트
-
-| 포트 | 방향 | 기능 |
-| --- | --- | --- |
-| `6000/udp` | Jetson -> GUI | EO 영상, EO 탐지/추적 패킷 |
-| `6001/udp` | Jetson -> GUI | IR 영상 |
-| `6002/udp` | Jetson/VLM -> GUI | VLM 분석 결과 |
-| `8000/udp` | GUI -> Jetson | 모터 제어 명령 패킷 |
-| `8001/udp` | Jetson -> GUI | 모터 상태 패킷 |
-| `8010/udp` | GUI -> Jetson camera bridge | VLM 위험 객체 tracking 녹화 시작/종료 제어 |
-| `8088/tcp` | Mobile -> GUI | 모바일 위험 알림 HTTP/SSE |
-| `8090/tcp` | GUI -> Jetson | 녹화 영상 목록/다운로드 HTTP 서버 |
-
-## 모터 제어 패킷
-
-GUI는 `8000/udp`로 10바이트 little-endian 패킷을 보냅니다.
-
-| 바이트 | 필드 | 설명 |
-| --- | --- | --- |
-| `0` | mode | 자동/수동 모드 |
-| `1` | tracking | 추적 명령. 추적 상태가 켜져 있고 위험 객체가 선택된 경우에만 `1` |
-| `2` | track_id | 추적 대상 객체 ID. `0~254`, `0xff`는 auto |
-| `3` | btn_mask | 방향 버튼 비트 |
-| `4~5` | pan_pos | pan raw 위치 `0~4095` |
-| `6~7` | tilt_pos | tilt raw 위치 `0~4095` |
-| `8` | scan_step | 자동 스캔 step size |
-| `9` | manual_step | 수동 조작 step size |
-
-GUI의 step size 표시는 1도부터 10도까지 사용합니다. 모터로 보낼 때는 `deg / 360.0 * 4096.0` 기준으로 raw step 값으로 변환합니다.
-
-모터 상태는 `8001/udp`로 받습니다. 현재 명세는 pan 18바이트와 tilt 18바이트가 이어진 36바이트 패킷입니다.
-
-## 녹화 영상
-
-GUI의 녹화 영상 목록은 Jetson의 녹화 HTTP 서버에서 가져옵니다.
-
-기본 주소는 다음 형식입니다.
+## BroadcastControl.App 구조
 
 ```text
-http://{Jetson IP}:8090/api/videos
+BroadcastControl.App/
+  App.xaml
+  App.xaml.cs
+  MainWindow.xaml
+  MainWindow.xaml.cs
+
+  Infrastructure/
+    RelayCommand.cs
+
+  Views/
+    Camera/
+    Monitoring/
+    Motor/
+    Operation/
+    Recording/
+    Settings/
+
+  ViewModels/
+    MainViewModel.cs
+    ViewModelBase.cs
+    Camera/
+    Monitoring/
+    Motor/
+    Operation/
+    Recording/
+
+  Services/
+    Camera/
+    Monitoring/
+    Motor/
+    Network/
+    Recording/
+
+  Models/
+    Camera/
+    Motor/
+    Network/
 ```
 
-따라서 GUI 목록에 녹화 영상이 뜨려면 Jetson 쪽에서 `8090/tcp` HTTP 서버가 실행 중이어야 하고, PC에서 해당 Jetson IP로 접근 가능해야 합니다.
-
-VLM이 위험 등급 객체를 감지해 GUI가 tracking=1을 보내면, GUI는 같은 Jetson IP의 `8010/udp`로 추적 녹화 제어 패킷도 함께 보냅니다.
-Jetson camera bridge는 이 신호를 받아 `/home/lig/Desktop/video/Tracked` 폴더에 `Tracking_YYYYMMDD_HHMMSS.mp4` 형식의 별도 영상을 저장합니다.
-
-## GUI IP 적용
-
-GUI의 Network 영역에서 `GUI IP`를 저장하면 `LigDnaGui.config.json`의 `PcGuiHost` 값이 바뀝니다.
-`JetsonThor.RosCameraBridge/run_camera_udp_bridge.sh`는 `GUI_HOST` 환경변수를 따로 주지 않은 경우 이 값을 읽어 다음 실행 시 송출 대상 IP로 사용합니다.
-
-즉, Jetson 브릿지를 껐다가 다시 켤 때 다음처럼 실행하면 저장된 GUI IP가 자동 적용됩니다.
-
-```bash
-cd ~/LIG_DNA_GUI/JetsonThor.RosCameraBridge
-bash ./run_camera_udp_bridge.sh
-```
-
-단, Windows GUI에서 저장한 설정 파일과 Jetson 쪽 `~/LIG_DNA_GUI/BroadcastControl.App/LigDnaGui.config.json`이 같은 값으로 반영되어 있어야 합니다.
-
-## C# 파일 역할
+## ViewModel 역할
 
 | 파일 | 역할 |
 | --- | --- |
-| `BroadcastControl.App/App.xaml.cs` | 앱 시작점, 다크/라이트 테마 적용, 공통 브러시 리소스 갱신 |
-| `BroadcastControl.App/AssemblyInfo.cs` | WPF 리소스 딕셔너리 탐색 위치 설정 |
-| `BroadcastControl.App/MainWindow.xaml.cs` | 메인 화면 code-behind. 서비스 연결, UI 이벤트, 영상 표시, 탐지 오버레이, 녹화 영상 UI, 네트워크 설정 저장을 담당 |
-| `BroadcastControl.App/Infrastructure/RelayCommand.cs` | ViewModel 명령을 WPF `ICommand`로 연결하는 공통 커맨드 클래스 |
-| `BroadcastControl.App/Services/AppNetworkSettings.cs` | `LigDnaGui.config.json` 기반 네트워크 설정 로드/저장, 로컬 PC IPv4 목록 조회 |
-| `BroadcastControl.App/Services/MobileAlertHubService.cs` | 모바일 브라우저용 위험 알림 HTTP/SSE 서버 |
-| `BroadcastControl.App/Services/UdpEncodedVideoReceiverService.cs` | EO/IR UDP 영상 조각 조립, JPEG 디코딩, detection/status 패킷 전달 |
-| `BroadcastControl.App/Services/UdpMotorControlService.cs` | GUI의 모터 제어 상태를 10바이트 UDP 패킷으로 직렬화해 Jetson으로 송신 |
-| `BroadcastControl.App/Services/UdpMotorStatusReceiverService.cs` | Jetson에서 오는 모터 상태 패킷을 수신하고 pan/tilt 상태로 파싱 |
-| `BroadcastControl.App/Services/UdpVlmResultReceiverService.cs` | VLM 분석 결과 UDP 수신, 전체 위험도와 객체별 위험도 파싱 |
-| `BroadcastControl.App/Services/ViewportRecordingService.cs` | 현재 GUI 화면 영역을 로컬 동영상 파일로 저장 |
-| `BroadcastControl.App/ViewModels/MainViewModel.cs` | 화면 상태와 명령의 중심 ViewModel. 모드, 추적 조건, 모터 raw/degree 변환, 로그, 언어, 테마 상태를 관리 |
+| `ViewModels/MainViewModel.cs` | 루트 ViewModel입니다. 세부 ViewModel을 소유하고 공통 상태, Command, 로그, 언어/테마 상태를 제공합니다. |
+| `ViewModels/ViewModelBase.cs` | `INotifyPropertyChanged`와 `SetProperty`를 제공하는 공통 기반 클래스입니다. |
+| `ViewModels/Camera/CameraViewModel.cs` | EO/IR 영상 수신 서비스와 YOLO 탐지 결과 수신 서비스를 소유하고, 줌/회전/밝기/대비 상태를 관리합니다. |
+| `ViewModels/Monitoring/MonitoringViewModel.cs` | System Status, YOLO Targets, 시스템 로그 표시 데이터를 관리하고, YOLO 위험도 기반 추적 대상 ID를 갱신합니다. |
+| `ViewModels/Motor/MotorControlViewModel.cs` | 모터 명령 송신 서비스와 모터 상태 수신 서비스를 소유하고 Pan/Tilt, 방향키, 각도 입력, Motor Speed를 관리합니다. |
+| `ViewModels/Operation/OperationControlViewModel.cs` | Scan/Manual 모드, Tracking, 주 탐지체, 테마, 언어, 네트워크 설정 상태를 관리합니다. |
+| `ViewModels/Recording/RecordingViewModel.cs` | 수동 화면 녹화 서비스와 녹화 상태, 녹화 영상 목록 표시 상태를 관리합니다. |
 
-## MVVM 구조
+## Service 역할
 
-이 프로젝트는 WPF MVVM 구조를 기본으로 사용합니다.
+| 파일 | 역할 |
+| --- | --- |
+| `Services/Camera/UdpEncodedVideoReceiverService.cs` | EO/IR JPEG UDP 프레임을 수신, 조립, 디코딩하고 YOLO 탐지/status 패킷을 파싱합니다. |
+| `Services/Camera/DetectionOverlayService.cs` | 영상 표시 영역 기준 바운딩 박스 좌표를 계산합니다. |
+| `Services/Motor/UdpMotorControlService.cs` | GUI에서 Jetson으로 모터/추적 UDP 명령을 전송합니다. |
+| `Services/Motor/MotorPacketSerializer.cs` | 모터 명령 값을 Jetson 규격의 UDP 패킷으로 직렬화합니다. |
+| `Services/Motor/UdpMotorStatusReceiverService.cs` | Jetson 모터 상태 UDP 패킷을 수신하고 파싱합니다. |
+| `Services/Recording/ViewportRecordingService.cs` | GUI 카메라 표시 영역을 AVI 파일로 녹화합니다. |
+| `Services/Network/UdpReceiverService.cs` | 범용 UDP 수신 기능을 제공합니다. |
+| `Services/Network/UdpSenderService.cs` | 범용 UDP 송신 기능을 제공합니다. |
+| `Services/Monitoring/SystemLogService.cs` | 시스템 로그 이벤트를 전달합니다. |
 
-| 계층 | 파일 | 설명 |
+## 통신 포트
+
+| 포트 | 방향 | 기능 |
 | --- | --- | --- |
-| View | `MainWindow.xaml` | 실제 화면 레이아웃과 바인딩 정의 |
-| View code-behind | `MainWindow.xaml.cs` | WPF 컨트롤, 마우스 입력, 영상 렌더링처럼 View에 가까운 작업 처리 |
-| ViewModel | `MainViewModel.cs` | 화면에 표시할 상태와 버튼 명령 관리 |
-| Services | `Services/*.cs` | UDP, HTTP, 녹화, 설정 파일 같은 외부 입출력 담당 |
-| Infrastructure | `RelayCommand.cs` | MVVM 명령 연결 보조 |
+| `6000/udp` | Jetson -> GUI | EO JPEG 영상 프레임 |
+| `6001/udp` | Jetson -> GUI | IR JPEG 영상 프레임 |
+| `6002/udp` | Jetson -> GUI | EO/IR YOLO 탐지 결과 |
+| `8000/udp` | GUI -> Jetson | 모터/추적 명령 |
+| `8001/udp` | Jetson -> GUI | 모터 상태 |
+| `8090/http` | Jetson -> GUI | 녹화 영상 목록/다운로드 |
 
-영상 렌더링, 마우스 클릭 좌표, WPF `Image` 컨트롤, 녹화 미디어 컨트롤처럼 View 객체에 직접 접근해야 하는 기능은 `MainWindow.xaml.cs`에 남겨 두었습니다. 대신 모드 판단, 추적 가능 여부, 모터 값 변환, 표시 텍스트 같은 상태 중심 로직은 `MainViewModel.cs`에서 관리합니다.
+## 영상 수신 형식
+
+EO/IR 영상은 raw image가 아니라 JPEG로 압축된 프레임입니다. Jetson 브릿지가 각 프레임을 JPEG로 인코딩한 뒤 UDP 청크로 나누어 보내고, GUI가 같은 frame id의 청크를 모아 JPEG를 복원한 다음 WPF 이미지로 표시합니다.
+
+```text
+ROS Image
+  -> JPEG 압축
+  -> UDP 청크 분할
+  -> GUI UDP 수신
+  -> JPEG 조립/디코딩
+  -> View 표시
+```
+
+## 모터 명령 패킷
+
+GUI는 Jetson의 `8000/udp`로 모터 명령 패킷을 보냅니다. Pan/Tilt 각도는 GUI에서 degree로 표시하지만 전송 시 raw step으로 변환됩니다.
+
+```text
+raw = deg / 360.0 * 4096.0
+```
+
+최종 전송값은 `0~4095` 범위로 제한합니다.
 
 ## 빌드
 
 ```powershell
-dotnet build .\BroadcastControl.App\BroadcastControl.App.csproj
+dotnet build BroadcastControl.slnx -c Debug
 ```
 
-현재 GUI는 Windows WPF 앱이므로 Windows Desktop을 포함한 .NET SDK가 필요합니다.
+이미 패키지가 복원된 상태에서 빠르게 확인할 때는 다음 명령을 사용할 수 있습니다.
+
+```powershell
+dotnet build BroadcastControl.slnx -c Debug --no-restore
+```

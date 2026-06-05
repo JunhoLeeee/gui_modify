@@ -1,0 +1,138 @@
+﻿<UserControl x:Class="BroadcastControl.App.Views.Operation.OperationControlView"              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <Grid Margin="0,0,12,0">
+                        <Border Grid.Row="1"
+                            Padding="14,12"
+                            Style="{StaticResource GlassCardBorder}"
+                            CornerRadius="2">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2.0*" />
+                                    <ColumnDefinition Width="1.0*" />
+                                    <ColumnDefinition Width="1.0*" />
+                                    <ColumnDefinition Width="1.32*" />
+                                    <ColumnDefinition Width="1.43*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,6,0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Width="92" Margin="0,0,10,0" Command="{Binding ResetContrastCommand}" Style="{StaticResource TopBarSmallButton}" Content="{Binding ContrastText}" />
+                                    <Slider Width="220" Minimum="0" Maximum="100" Value="{Binding Contrast, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsSystemPoweredOn}" Style="{StaticResource TopBarCompactSlider}" />
+                                </StackPanel>
+
+                                <Button Grid.Row="0" Grid.Column="1" Margin="6,18,6,45" Command="{Binding SetModeCommand}" CommandParameter="&#xC790;&#xB3D9;" IsHitTestVisible="{Binding CanSelectAutoMode}" Opacity="{Binding AutoModeOpacity}" Style="{StaticResource TopBarButton}" Content="{Binding Text[AutoMode]}" Grid.RowSpan="2" />
+                                <Button Grid.Row="0" Grid.Column="2" Margin="6,18,6,45" Command="{Binding SetModeCommand}" CommandParameter="&#xC218;&#xB3D9;" IsHitTestVisible="{Binding CanSelectManualMode}" Opacity="{Binding ManualModeOpacity}" Style="{StaticResource TopBarButton}" Content="{Binding Text[ManualMode]}" Click="Button_Click" Grid.RowSpan="2" />
+
+                                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,6,0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Width="92" Margin="0,0,10,0" Command="{Binding ResetBrightnessCommand}" Style="{StaticResource TopBarSmallButton}" Content="{Binding BrightnessText}" />
+                                    <Slider Width="220" Minimum="0" Maximum="100" Value="{Binding Brightness, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsSystemPoweredOn}" Style="{StaticResource TopBarCompactSlider}" />
+                                </StackPanel>
+
+                                <Grid Grid.Row="2" Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="92" />
+                                        <ColumnDefinition Width="10" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="10" />
+                                        <ColumnDefinition Width="44" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Command="{Binding ResetZoomCommand}" Style="{StaticResource TopBarSmallButton}" Content="{Binding Text[CamZoom]}" />
+                                    <Slider Grid.Column="2" Minimum="1" Maximum="4" TickFrequency="0.1" IsSnapToTickEnabled="False" Value="{Binding ZoomLevel, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanUseZoomControls}" Style="{StaticResource TopBarCompactSlider}" />
+                                    <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" FontWeight="SemiBold" TextAlignment="Right" Text="{Binding ZoomLevelText}" Grid.ColumnSpan="2" Margin="3,0,7,0" />
+                                </Grid>
+
+                                <Button Grid.Row="1"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    Grid.ColumnSpan="2"
+                                    Margin="6,43,6,19"
+                                    Command="{Binding ToggleTrackingModeCommand}"
+                                    Opacity="{Binding TrackingModeOpacity}"
+                                    Style="{StaticResource TopBarButton}"
+                                    Content="{Binding TrackingModeText}" />
+
+                                <Border Grid.Row="0"
+                                    Grid.RowSpan="3"
+                                    Grid.Column="3"
+                                    Margin="6,0"
+                                    Padding="8,6"
+                                    Background="{DynamicResource OverlayPanelBrush}"
+                                    BorderBrush="{DynamicResource PanelBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="2">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource PrimaryTextBrush}"
+                                                   FontSize="17"
+                                                   FontWeight="Bold"
+                                                   Text="{Binding Text[NetworkSettings]}" />
+                                            <Button Grid.Column="1"
+                                                Width="48"
+                                                Height="24"
+                                                Margin="6,0,0,0"
+                                                Padding="4,0"
+                                                FontSize="11"
+                                                Click="SaveNetworkSettingsButton_OnClick"
+                                                Style="{StaticResource TopBarSmallButton}"
+                                                Content="{Binding Text[Save]}" />
+                                        </Grid>
+                                        <StackPanel Grid.Row="1" Margin="0,5,0,0">
+                                            <TextBlock Text="{Binding Text[JetsonIp]}"
+                                                Style="{StaticResource SettingsCompactLabel}" />
+                                            <TextBox x:Name="JetsonHostTextBox"
+                                                Height="28"
+                                                Padding="6,3"
+                                                FontSize="12"
+                                                Style="{StaticResource SettingsCompactTextBox}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Row="2" Margin="0,5,0,0">
+                                            <TextBlock Text="{Binding Text[PcIp]}"
+                                                Style="{StaticResource SettingsCompactLabel}" />
+                                            <ComboBox x:Name="PcGuiHostComboBox"
+                                                Height="28"
+                                                Padding="6,2"
+                                                FontSize="12"
+                                                IsEditable="True"
+                                                Style="{StaticResource SettingsCompactComboBox}">
+                                                <ComboBox.Resources>
+                                                    <Style TargetType="TextBox">
+                                                        <Setter Property="Foreground" Value="#FF111827" />
+                                                        <Setter Property="Background" Value="{DynamicResource DrawerItemBrush}" />
+                                                        <Setter Property="CaretBrush" Value="#FF111827" />
+                                                        <Setter Property="FontSize" Value="12" />
+                                                        <Setter Property="Padding" Value="6,3" />
+                                                        <Setter Property="VerticalContentAlignment" Value="Center" />
+                                                    </Style>
+                                                </ComboBox.Resources>
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="4" Margin="6,0,0,0" Padding="10,8" Background="{DynamicResource OverlayPanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="2">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Foreground="{DynamicResource PrimaryTextBrush}" FontSize="19" FontWeight="Bold" Text="{Binding Text[SystemStatus]}" />
+                                        <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource PrimaryTextBrush}" FontSize="16" FontWeight="Bold" Text="{Binding CurrentThreatText}" />
+                                            <Ellipse Width="13" Height="13" Margin="7,3,0,0" VerticalAlignment="Top" Fill="{Binding CurrentThreatBrush}" />
+                                        </StackPanel>
+                                        <TextBlock Margin="0,5,0,0" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap" Text="{Binding PrimaryTargetShortText}" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+    </Grid>
+</UserControl>

@@ -1,5 +1,3 @@
-// WPF 화면 요소 자체를 캡처해 로컬 영상 파일로 저장하는 녹화 서비스 파일이다.
-// Jetson에서 저장되는 원본 녹화와 별개로, GUI에 보이는 카메라 뷰포트를 일정 간격으로 캡처해 AVI 파일로 만든다.
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
@@ -9,6 +7,8 @@ using OpenCvSharp;
 
 namespace BroadcastControl.App.Services;
 
+// GUI의 카메라 표시 영역을 주기적으로 캡처해 Desktop에 AVI 파일로 저장합니다.
+// Jetson 자동 녹화와 별개로 사용자가 GUI에서 보는 화면 자체를 수동 녹화할 때 사용됩니다.
 public sealed class ViewportRecordingService : IDisposable
 {
     private readonly DispatcherTimer _timer;
@@ -36,8 +36,7 @@ public sealed class ViewportRecordingService : IDisposable
 
     public string StartRecordingToDesktop(FrameworkElement target)
     {
-        // 녹화 대상은 WPF 화면 요소다.
-        // CameraViewport를 넘기면 overlay와 줌이 반영된 실제 화면이 저장된다.
+        // 이미 녹화 중이면 같은 파일 경로를 반환해 중복 VideoWriter 생성을 막습니다.
         if (_isRecording && !string.IsNullOrWhiteSpace(_recordingPath))
         {
             return _recordingPath;
@@ -88,8 +87,7 @@ public sealed class ViewportRecordingService : IDisposable
 
     private void CaptureAndWriteFrame()
     {
-        // WPF 요소를 RenderTargetBitmap으로 캡처한 뒤 OpenCV Mat으로 변환해 VideoWriter에 넣는다.
-        // UI 표시 결과를 그대로 기록해야 하므로 원본 UDP 프레임이 아니라 화면 캡처 방식을 사용한다.
+        // WPF 요소를 RenderTargetBitmap으로 캡처한 뒤 OpenCV Mat으로 변환해 AVI 프레임으로 저장합니다.
         if (!_isRecording || _target is null || string.IsNullOrWhiteSpace(_recordingPath))
         {
             return;
@@ -156,8 +154,7 @@ public sealed class ViewportRecordingService : IDisposable
 
     private void EnsureVideoWriter(int width, int height)
     {
-        // PC마다 OpenCV backend 지원 상태가 달라서 여러 backend/codec 조합을 순서대로 시도한다.
-        // 첫 번째로 열리는 조합을 사용하고, 모두 실패하면 LastRecordingErrorMessage에 이유를 남긴다.
+        // OpenCV 백엔드/코덱 조합을 순서대로 시도해 현장 PC에 설치된 코덱 차이를 흡수합니다.
         if (_writer is not null || string.IsNullOrWhiteSpace(_recordingPath))
         {
             return;

@@ -1,0 +1,446 @@
+﻿<UserControl x:Class="BroadcastControl.App.Views.Camera.CameraView"              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <Grid Margin="0,0,12,0">
+                        <Border x:Name="CameraPanel"
+                        Grid.Row="0"
+                        Margin="0,0,0,8"
+                        Style="{StaticResource GlassCardBorder}"
+                        BorderBrush="#00000000"
+                        CornerRadius="2">
+                            <Grid x:Name="CameraViewport"
+                          ClipToBounds="True"
+                          SizeChanged="CameraViewport_OnSizeChanged"
+                          MouseLeftButtonDown="CameraViewport_OnMouseLeftButtonDown"
+                          MouseWheel="CameraViewport_OnMouseWheel"
+                          MouseMove="CameraViewport_OnMouseMove"
+                          MouseLeftButtonUp="CameraViewport_OnMouseLeftButtonUp">
+                                <Rectangle Fill="#FF000000" />
+
+                                <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                             <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                                <Image Source="{Binding LargeFeedImage}"
+                               Margin="0"
+                               Stretch="{Binding LargeFeedStretch}"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               RenderTransformOrigin="0.5,0.5">
+                                    <Image.RenderTransform>
+                                        <TransformGroup>
+                                            <RotateTransform Angle="{Binding LargeFeedRotationAngle}" />
+                                            <ScaleTransform ScaleX="{Binding LargeFeedScale}"
+                                                    ScaleY="{Binding LargeFeedScale}" />
+                                            <TranslateTransform X="{Binding ZoomTransformX}"
+                                                        Y="{Binding ZoomTransformY}" />
+                                        </TransformGroup>
+                                    </Image.RenderTransform>
+                                </Image>
+
+                                <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                                <Border Margin="16,12,0,0"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource OverlayCardBorder}"
+                                BorderThickness="0"
+                                CornerRadius="2"
+                                Padding="8,4">
+                                    <DockPanel LastChildFill="False">
+                                        <TextBlock DockPanel.Dock="Left"
+                                           Foreground="{DynamicResource PrimaryTextBrush}"
+                                           FontSize="17"
+                                           FontWeight="Bold"
+                                           Text="{Binding LargeFeedTitle}" />
+                                        <Button DockPanel.Dock="Right"
+                                        Margin="10,0,0,0"
+                                        Click="RotateLargeFeedButton_OnClick"
+                                        Style="{StaticResource InlineRotateButton}">
+                                            <materialDesign:PackIcon Kind="RotateRight" Width="14" Height="14" />
+                                        </Button>
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                             <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                                <Border Width="152"
+                                Height="108"
+                                Margin="18,0,0,20"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Bottom"
+                                Style="{StaticResource OverlayCardBorder}"
+                                CornerRadius="2"
+                                Visibility="{Binding ShowZoomMiniMap, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <Grid Margin="10">
+                                        <TextBlock Foreground="{DynamicResource SecondaryTextBrush}"
+                                           FontSize="11"
+                                           Text="{Binding Text[ZoomMiniMap]}" />
+                                        <Canvas Width="130"
+                                        Height="74"
+                                        Margin="0,18,0,0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Top">
+                                            <Rectangle Width="130"
+                                               Height="74"
+                                               Fill="#55333F4D"
+                                               Stroke="#FF64748B"
+                                               StrokeThickness="1" />
+                                            <Rectangle Width="{Binding MiniMapViewportWidth}"
+                                               Height="{Binding MiniMapViewportHeight}"
+                                               Canvas.Left="{Binding MiniMapViewportLeft}"
+                                               Canvas.Top="{Binding MiniMapViewportTop}"
+                                               Fill="#3300FFAA"
+                                               Stroke="{DynamicResource AccentBrush}"
+                                               StrokeThickness="1.5" />
+                                        </Canvas>
+                                    </Grid>
+                                </Border>
+
+                                <Canvas x:Name="DetectionOverlayCanvas"
+                                Width="{Binding ElementName=CameraViewport, Path=ActualWidth}"
+                                Height="{Binding ElementName=CameraViewport, Path=ActualHeight}"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Panel.ZIndex="5"
+                                ClipToBounds="True"
+                                RenderTransformOrigin="0.5,0.5"
+                                IsHitTestVisible="False">
+                                    <Canvas.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform ScaleX="{Binding LargeFeedScale}"
+                                                    ScaleY="{Binding LargeFeedScale}" />
+                                            <TranslateTransform X="{Binding ZoomTransformX}"
+                                                        Y="{Binding ZoomTransformY}" />
+                                        </TransformGroup>
+                                    </Canvas.RenderTransform>
+                                </Canvas>
+
+                                <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                             <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                                <Button Width="168"
+                                Height="124"
+                                Margin="0,8,26,0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Command="{Binding SwapFeedsCommand}"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Padding="0">
+                                    <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                                    <Border Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="0"
+                                    CornerRadius="1">
+                                        <Grid ClipToBounds="True" Background="#FF000000">
+                                            <Image Source="{Binding InsetFeedImage}"
+                                           Stretch="{Binding InsetFeedStretch}"
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           RenderTransformOrigin="0.5,0.5">
+                                                <Image.RenderTransform>
+                                                    <RotateTransform Angle="{Binding InsetFeedRotationAngle}" />
+                                                </Image.RenderTransform>
+                                            </Image>
+                                            <Border Margin="10,10,0,0"
+                                             HorizontalAlignment="Left"
+                                             VerticalAlignment="Top"
+                                             Style="{StaticResource OverlayCardBorder}"
+                                             BorderThickness="0"
+                                             CornerRadius="2"
+                                             Padding="7,3">
+                                                <DockPanel LastChildFill="False">
+                                                    <TextBlock DockPanel.Dock="Left"
+                                                       Foreground="{DynamicResource PrimaryTextBrush}"
+                                                       FontSize="13"
+                                                       FontWeight="Bold"
+                                                       Text="{Binding InsetFeedTitle}" />
+                                                    <Button DockPanel.Dock="Right"
+                                                    Margin="8,0,0,0"
+                                                    Click="RotateInsetFeedButton_OnClick"
+                                                    Style="{StaticResource InlineRotateButton}">
+                                                        <materialDesign:PackIcon Kind="RotateRight" Width="12" Height="12" />
+                                                    </Button>
+                                                </DockPanel>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </Button>
+
+                                <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                             <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                                <Grid Margin="0,0,24,26"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Bottom"
+                              Visibility="Collapsed">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Row="0"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="3"
+                                    Margin="0,0,0,8"
+                                    Padding="12,5"
+                                    Background="#DD05070A"
+                                    BorderBrush="{DynamicResource PanelBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="2">
+                                        <TextBlock HorizontalAlignment="Center"
+                                           Foreground="{DynamicResource PrimaryTextBrush}"
+                                           FontSize="16"
+                                           FontWeight="Bold"
+                                           Text="{Binding Text[MotorControl]}" />
+                                    </Border>
+
+                                    <Button Grid.Row="1"
+                                    Grid.Column="1"
+                                    Tag="Up"
+                                    IsEnabled="{Binding CanUseMotorControls}"
+                                    PreviewMouseLeftButtonDown="MotorButton_OnPreviewMouseLeftButtonDown"
+                                    PreviewMouseLeftButtonUp="MotorButton_OnPreviewMouseLeftButtonUp"
+                                    MouseLeave="MotorButton_OnMouseLeave"
+                                    Style="{StaticResource ArrowButton}">
+                                        <materialDesign:PackIcon Kind="ArrowUpBold" Width="20" Height="20" />
+                                    </Button>
+                                    <Button Grid.Row="2"
+                                    Grid.Column="0"
+                                    Margin="0,6,6,6"
+                                    Tag="Left"
+                                    IsEnabled="{Binding CanUseMotorControls}"
+                                    PreviewMouseLeftButtonDown="MotorButton_OnPreviewMouseLeftButtonDown"
+                                    PreviewMouseLeftButtonUp="MotorButton_OnPreviewMouseLeftButtonUp"
+                                    MouseLeave="MotorButton_OnMouseLeave"
+                                    Style="{StaticResource ArrowButton}">
+                                        <materialDesign:PackIcon Kind="ArrowLeftBold" Width="20" Height="20" />
+                                    </Button>
+                                    <Button Grid.Row="2"
+                                    Grid.Column="1"
+                                    Margin="0,6,0,6"
+                                    Tag="Center"
+                                    IsEnabled="{Binding CanUseMotorControls}"
+                                    PreviewMouseLeftButtonDown="MotorButton_OnPreviewMouseLeftButtonDown"
+                                    PreviewMouseLeftButtonUp="MotorButton_OnPreviewMouseLeftButtonUp"
+                                    MouseLeave="MotorButton_OnMouseLeave"
+                                    Style="{StaticResource ArrowButton}">
+                                        <Ellipse Width="16"
+                                         Height="16"
+                                         Stroke="{DynamicResource PrimaryTextBrush}"
+                                         StrokeThickness="2"
+                                         Fill="Transparent" />
+                                    </Button>
+                                    <Button Grid.Row="2"
+                                    Grid.Column="2"
+                                    Margin="6,6,0,6"
+                                    Tag="Right"
+                                    IsEnabled="{Binding CanUseMotorControls}"
+                                    PreviewMouseLeftButtonDown="MotorButton_OnPreviewMouseLeftButtonDown"
+                                    PreviewMouseLeftButtonUp="MotorButton_OnPreviewMouseLeftButtonUp"
+                                    MouseLeave="MotorButton_OnMouseLeave"
+                                    Style="{StaticResource ArrowButton}">
+                                        <materialDesign:PackIcon Kind="ArrowRightBold" Width="20" Height="20" />
+                                    </Button>
+                                    <Button Grid.Row="3"
+                                    Grid.Column="1"
+                                    Tag="Down"
+                                    IsEnabled="{Binding CanUseMotorControls}"
+                                    PreviewMouseLeftButtonDown="MotorButton_OnPreviewMouseLeftButtonDown"
+                                    PreviewMouseLeftButtonUp="MotorButton_OnPreviewMouseLeftButtonUp"
+                                    MouseLeave="MotorButton_OnMouseLeave"
+                                    Style="{StaticResource ArrowButton}">
+                                        <materialDesign:PackIcon Kind="ArrowDownBold" Width="20" Height="20" />
+                                    </Button>
+                                </Grid>
+
+                                <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                                <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                             <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                                <Border Margin="182,0,220,18"
+                                Padding="10,7"
+                                Width="340"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Bottom"
+                                Style="{StaticResource OverlayCardBorder}"
+                                CornerRadius="2"
+                                Visibility="Collapsed">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <!-- 화면 구성 요소의 역할을 설명하는 주석입니다. -->
+                                        <Button VerticalAlignment="Center"
+                                        Command="{Binding ResetZoomCommand}"
+                                        Style="{StaticResource TopBarSmallButton}"
+                                        Content="{Binding Text[CamZoom]}" />
+                                        <Slider Grid.Column="1"
+                                        Margin="12,0"
+                                        Minimum="1"
+                                        Maximum="4"
+                                        TickFrequency="0.1"
+                                        IsSnapToTickEnabled="False"
+                                        Value="{Binding ZoomLevel, UpdateSourceTrigger=PropertyChanged}"
+                                        IsEnabled="{Binding CanUseZoomControls}"
+                                        Style="{StaticResource ZoomSliderStyle}" />
+                                        <TextBlock Grid.Column="2"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource SecondaryTextBrush}"
+                                           FontSize="13"
+                                           Text="{Binding ZoomLevelText}" />
+                                    </Grid>
+                                </Border>
+
+                                <Border Margin="14,0,14,14"
+                                Padding="12"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Bottom"
+                                Background="#CC1B2431"
+                                BorderBrush="{DynamicResource PanelBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="2"
+                                Panel.ZIndex="8"
+                                Visibility="Collapsed">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="44" />
+                                            <RowDefinition Height="44" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2.2*" />
+                                            <ColumnDefinition Width="1.05*" />
+                                            <ColumnDefinition Width="1.05*" />
+                                            <ColumnDefinition Width="1.2*" />
+                                            <ColumnDefinition Width="1.2*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Row="0"
+                                            Grid.Column="0"
+                                            Margin="0,0,12,0"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                            <Button Width="88"
+                                            Margin="0,0,10,0"
+                                            Command="{Binding ResetZoomCommand}"
+                                            Style="{StaticResource TopBarSmallButton}"
+                                        Content="{Binding Text[CamZoom]}" />
+                                            <Slider Width="210"
+                                            Minimum="1"
+                                            Maximum="4"
+                                            TickFrequency="0.1"
+                                            IsSnapToTickEnabled="False"
+                                            Value="{Binding ZoomLevel, UpdateSourceTrigger=PropertyChanged}"
+                                            IsEnabled="{Binding CanUseZoomControls}" />
+                                            <TextBlock Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SecondaryTextBrush}"
+                                               FontSize="12"
+                                               Text="{Binding ZoomLevelText}" />
+                                        </StackPanel>
+
+                                        <Button Grid.Row="0"
+                                        Grid.Column="1"
+                                        Margin="4,0"
+                                        Command="{Binding SetModeCommand}"
+                                        CommandParameter="&#xC790;&#xB3D9;"
+                                        IsHitTestVisible="{Binding CanSelectAutoMode}"
+                                        Opacity="{Binding AutoModeOpacity}"
+                                        Style="{StaticResource TopBarButton}"
+                                        Content="{Binding Text[AutoMode]}" />
+                                        <Button Grid.Row="0"
+                                        Grid.Column="2"
+                                        Margin="4,0"
+                                        Command="{Binding SetModeCommand}"
+                                        CommandParameter="&#xC218;&#xB3D9;"
+                                        IsHitTestVisible="{Binding CanSelectManualMode}"
+                                        Opacity="{Binding ManualModeOpacity}"
+                                        Style="{StaticResource TopBarButton}"
+                                        Content="{Binding Text[ManualMode]}" />
+
+                                        <StackPanel Grid.Row="1"
+                                            Grid.Column="0"
+                                            Margin="0,0,12,0"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                            <Button Width="88"
+                                            Margin="0,0,10,0"
+                                            Command="{Binding ResetBrightnessCommand}"
+                                            Style="{StaticResource TopBarSmallButton}"
+                                            Content="{Binding BrightnessText}" />
+                                            <Slider Width="180"
+                                            Minimum="0"
+                                            Maximum="100"
+                                            Value="{Binding Brightness, UpdateSourceTrigger=PropertyChanged}"
+                                            IsEnabled="{Binding IsSystemPoweredOn}" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="1"
+                                            Grid.Column="1"
+                                            Grid.ColumnSpan="2"
+                                            Margin="4,0,10,0"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                            <Button Width="88"
+                                            Margin="0,0,10,0"
+                                            Command="{Binding ResetContrastCommand}"
+                                            Style="{StaticResource TopBarSmallButton}"
+                                            Content="{Binding ContrastText}" />
+                                            <Slider Width="145"
+                                            Minimum="0"
+                                            Maximum="100"
+                                            Value="{Binding Contrast, UpdateSourceTrigger=PropertyChanged}"
+                                            IsEnabled="{Binding IsSystemPoweredOn}" />
+                                        </StackPanel>
+
+                                        <Button Grid.Row="1"
+                                        Grid.Column="3"
+                                        Margin="4,0"
+                                        Command="{Binding ToggleManualRecordingCommand}"
+                                        Opacity="{Binding ManualRecordingButtonOpacity}"
+                                        IsEnabled="{Binding IsManualMode}"
+                                        Style="{StaticResource TopBarButton}"
+                                        Content="{Binding ManualRecordingButtonText}" />
+
+                                        <StackPanel Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="4"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            MinWidth="120">
+                                            <StackPanel Orientation="Horizontal"
+                                                Opacity="{Binding RecordingIndicatorOpacity}">
+                                                <Ellipse Width="8"
+                                                 Height="8"
+                                                 Margin="0,0,6,0"
+                                                 Fill="{Binding RecordingIndicatorBrush}" />
+                                                <TextBlock VerticalAlignment="Center"
+                                                   Foreground="{Binding RecordingTextBrush}"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Text="{Binding Text[RecordingStatus]}" />
+                                            </StackPanel>
+                                            <StackPanel Margin="0,3,0,0"
+                                                Orientation="Horizontal"
+                                                Opacity="{Binding JetsonConnectionOpacity}">
+                                                <Ellipse Width="8"
+                                                 Height="8"
+                                                 Margin="0,0,6,0"
+                                                 VerticalAlignment="Center"
+                                                 Fill="{Binding JetsonConnectionBrush}" />
+                                                <TextBlock VerticalAlignment="Center"
+                                                   Foreground="{Binding JetsonConnectionBrush}"
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
+                                                   Text="{Binding JetsonConnectionText}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </Border>
+    </Grid>
+</UserControl>
