@@ -288,11 +288,6 @@ public sealed partial class MainViewModel
             return;
         }
 
-        if (buttons == MotorButtonMask.None)
-        {
-            return;
-        }
-
         ApplyMotorButtonStateToCommandTarget(buttons);
 
         var sendMask = (buttons & MotorButtonMask.Center) != 0 ? MotorButtonMask.None : buttons;
