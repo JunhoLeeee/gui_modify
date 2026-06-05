@@ -245,7 +245,7 @@ public sealed partial class MainViewModel
         // 이후 수동 방향키나 각도 입력은 GUI 추정값이 아니라 이 피드백 위치를 기준으로 이어집니다.
         UpdateMotorStatusItems(PanMotorStatusItems, snapshot.Pan);
         _panMotorFeedbackRaw = ClampMotorRaw((int)Math.Min(snapshot.Pan.PresentPosition, (uint)MotorRawMaximum));
-        _panMotorPositionDegrees = DynamixelPositionToDegrees(snapshot.Pan.PresentPosition);
+        _panMotorPositionDegrees = -DynamixelPositionToDegrees(snapshot.Pan.PresentPosition);
         _motorPanRaw = _panMotorFeedbackRaw.Value;
         _motorPan = NormalizeMotorDegrees(_panMotorPositionDegrees);
         OnPropertyChanged(nameof(PanMotorPositionText));
@@ -254,7 +254,7 @@ public sealed partial class MainViewModel
         {
             UpdateMotorStatusItems(TiltMotorStatusItems, tilt);
             _tiltMotorFeedbackRaw = ClampMotorRaw((int)Math.Min(tilt.PresentPosition, (uint)MotorRawMaximum));
-            _tiltMotorPositionDegrees = DynamixelPositionToDegrees(tilt.PresentPosition);
+            _tiltMotorPositionDegrees = -DynamixelPositionToDegrees(tilt.PresentPosition);
             _motorTiltRaw = _tiltMotorFeedbackRaw.Value;
             _motorTilt = NormalizeMotorDegrees(_tiltMotorPositionDegrees);
             OnPropertyChanged(nameof(TiltMotorPositionText));
@@ -330,8 +330,8 @@ public sealed partial class MainViewModel
         panDegrees = NormalizeMotorDegrees(panDegrees);
         tiltDegrees = NormalizeMotorDegrees(tiltDegrees);
 
-        _motorPanRaw = DegreesToDynamixelPosition(panDegrees);
-        _motorTiltRaw = DegreesToDynamixelPosition(tiltDegrees);
+        _motorPanRaw = DegreesToDynamixelPosition(-panDegrees);
+        _motorTiltRaw = DegreesToDynamixelPosition(-tiltDegrees);
 
         if (!TrySendMotorCommandPacket(out var error, syncFromFeedback: false, forcedMode: 1))
         {
