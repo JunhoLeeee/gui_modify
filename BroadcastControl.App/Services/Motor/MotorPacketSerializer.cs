@@ -41,6 +41,6 @@ public static class MotorPacketSerializer
 
     private static byte EncodeButtonMask(MotorButtonMask buttons)
     {
-        return (byte)((byte)buttons & 0x0F);
+        return (byte)((byte)buttons & 0x1F);
     }
 }
