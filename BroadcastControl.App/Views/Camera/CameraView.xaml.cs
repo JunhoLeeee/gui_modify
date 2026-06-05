@@ -745,38 +745,49 @@ namespace BroadcastControl.App
         AddCornerToCanvas(rectLeft, rectTop + rectHeight, cornerLength, true, false, accentBrush, cornerThickness);
         AddCornerToCanvas(rectLeft + rectWidth, rectTop + rectHeight, cornerLength, false, false, accentBrush, cornerThickness);
 
-        var labelText = new TextBlock
+        var labelBorder = new Border
         {
-            Text = detection.LabelText,
-            Foreground = accentBrush,
-            FontSize = 12,
-            FontWeight = FontWeights.SemiBold
+            Background = new SolidColorBrush(Color.FromArgb(210, 8, 10, 16)),
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(6, 3, 6, 3),
+            Child = new TextBlock
+            {
+                Text = detection.LabelText,
+                Foreground = accentBrush,
+                FontSize = 14,
+                FontWeight = FontWeights.Bold
+            }
         };
-
-        labelText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var labelWidth = labelText.DesiredSize.Width;
-        var labelHeight = labelText.DesiredSize.Height;
+        labelBorder.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var labelWidth = labelBorder.DesiredSize.Width;
+        var labelHeight = labelBorder.DesiredSize.Height;
         var labelLeft = Math.Max(0, Math.Min(rectLeft, Math.Max(0, CameraActiveView.CameraViewportElement.ActualWidth - labelWidth - 4)));
         var preferredTop = rectTop - labelHeight - 6;
         var labelTop = preferredTop >= 0 ? preferredTop : Math.Min(CameraActiveView.CameraViewportElement.ActualHeight - labelHeight - 4, rectTop + 6);
-        Canvas.SetLeft(labelText, labelLeft);
-        Canvas.SetTop(labelText, Math.Max(0, labelTop));
-        CameraActiveView.DetectionOverlayCanvasElement.Children.Add(labelText);
+        Canvas.SetLeft(labelBorder, labelLeft);
+        Canvas.SetTop(labelBorder, Math.Max(0, labelTop));
+        CameraActiveView.DetectionOverlayCanvasElement.Children.Add(labelBorder);
 
         if (_vlmResults.TryGetValue(detection.ObjectId, out var vlmResult) && vlmResult.HasAnyData)
         {
-            var vlmText = new TextBlock
+            var vlmBorder = new Border
             {
-                Text = BuildVlmDisplayText(vlmResult),
-                Foreground = accentBrush,
-                FontSize = 11,
-                FontWeight = FontWeights.Normal,
-                Opacity = 0.9
+                Background = new SolidColorBrush(Color.FromArgb(220, 8, 10, 16)),
+                BorderBrush = accentBrush,
+                BorderThickness = new Thickness(3, 0, 0, 0),
+                Padding = new Thickness(7, 4, 7, 4),
+                Child = new TextBlock
+                {
+                    Text = BuildVlmDisplayText(vlmResult),
+                    Foreground = Brushes.White,
+                    FontSize = 13,
+                    FontWeight = FontWeights.SemiBold
+                }
             };
-            vlmText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            Canvas.SetLeft(vlmText, labelLeft);
-            Canvas.SetTop(vlmText, Math.Max(0, labelTop + labelHeight + 1));
-            CameraActiveView.DetectionOverlayCanvasElement.Children.Add(vlmText);
+            vlmBorder.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            Canvas.SetLeft(vlmBorder, labelLeft);
+            Canvas.SetTop(vlmBorder, Math.Max(0, labelTop + labelHeight + 2));
+            CameraActiveView.DetectionOverlayCanvasElement.Children.Add(vlmBorder);
         }
     }
 
