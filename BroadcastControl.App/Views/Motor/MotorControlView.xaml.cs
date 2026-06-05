@@ -209,7 +209,11 @@ public partial class MainWindow : Window
             _activeMotorDirections[direction] = count - 1;
         }
 
-        SendActiveMotorButtons();
+        if (direction != "Center")
+        {
+            SendActiveMotorButtons();
+        }
+
         UpdateMotorPadButtonVisualStates();
 
         if (_activeMotorDirections.Count == 0)
