@@ -245,7 +245,7 @@ public sealed partial class MainViewModel
         // 이후 수동 방향키나 각도 입력은 GUI 추정값이 아니라 이 피드백 위치를 기준으로 이어집니다.
         UpdateMotorStatusItems(PanMotorStatusItems, snapshot.Pan);
         _panMotorFeedbackRaw = ClampMotorRaw((int)Math.Min(snapshot.Pan.PresentPosition, (uint)MotorRawMaximum));
-        _panMotorPositionDegrees = -1*(DynamixelPositionToDegrees(snapshot.Pan.PresentPosition));
+        _panMotorPositionDegrees = DynamixelPositionToDegrees(snapshot.Pan.PresentPosition);
         _motorPanRaw = _panMotorFeedbackRaw.Value;
         _motorPan = NormalizeMotorDegrees(_panMotorPositionDegrees);
         OnPropertyChanged(nameof(PanMotorPositionText));
@@ -254,7 +254,7 @@ public sealed partial class MainViewModel
         {
             UpdateMotorStatusItems(TiltMotorStatusItems, tilt);
             _tiltMotorFeedbackRaw = ClampMotorRaw((int)Math.Min(tilt.PresentPosition, (uint)MotorRawMaximum));
-            _tiltMotorPositionDegrees = -1*(DynamixelPositionToDegrees(tilt.PresentPosition));
+            _tiltMotorPositionDegrees = DynamixelPositionToDegrees(tilt.PresentPosition);
             _motorTiltRaw = _tiltMotorFeedbackRaw.Value;
             _motorTilt = NormalizeMotorDegrees(_tiltMotorPositionDegrees);
             OnPropertyChanged(nameof(TiltMotorPositionText));
@@ -290,7 +290,8 @@ public sealed partial class MainViewModel
 
         ApplyMotorButtonStateToCommandTarget(buttons);
 
-        if (!TrySendMotorCommandPacket(out var modeError, buttons, syncFromFeedback: false))
+        var sendMask = (buttons & MotorButtonMask.Center) != 0 ? MotorButtonMask.None : buttons;
+        if (!TrySendMotorCommandPacket(out var modeError, sendMask, syncFromFeedback: false))
         {
             AppendImportantLog($"모터 수동 제어 패킷 전송에 실패했습니다: {modeError}");
             return;
