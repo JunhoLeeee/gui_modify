@@ -106,62 +106,19 @@ public sealed partial class MainViewModel
             .Select(detection => NormalizeThreatLevel(detection.ThreatLevel))
             .FirstOrDefault("\uB0AE\uC74C");
 
+        var wasTracking = _hasTrackedTarget;
         if (KeepUserSelectedTrackingTarget(detections))
         {
             return;
         }
 
-        var highThreatCandidates = detections
-            .Select((detection, index) => new TrackingCandidate(
-                detection.ObjectId,
-                GetThreatWeight(detection.ThreatLevel),
-                index))
-            .Where(candidate => candidate.ThreatWeight >= 3 && candidate.ObjectId >= 0)
-            .OrderByDescending(candidate => candidate.ThreatWeight)
-            .ThenBy(candidate => candidate.Order)
-            .ToArray();
-
-        var hasTrackedTarget = highThreatCandidates.Length > 0;
-        var yoloObjectId = -1;
-        if (hasTrackedTarget)
+        // 추적 중이던 객체가 화면에서 사라진 경우 Jetson에 추적 해제 상태를 전송합니다.
+        if (wasTracking)
         {
-            var highestThreatWeight = highThreatCandidates[0].ThreatWeight;
-            var currentTarget = highThreatCandidates
-                .Where(candidate =>
-                    candidate.ObjectId == _yoloObjectId &&
-                    candidate.ThreatWeight == highestThreatWeight)
-                .Select(candidate => (TrackingCandidate?)candidate)
-                .FirstOrDefault();
-            yoloObjectId = currentTarget?.ObjectId ?? highThreatCandidates[0].ObjectId;
-        }
-
-        var targetChanged = _hasTrackedTarget != hasTrackedTarget || _yoloObjectId != yoloObjectId || _isUserSelectedTrackId;
-        var shouldRefreshAutomaticTracking =
-            IsAutoMode &&
-            DateTime.Now - _lastAutomaticTrackingPacketSentAt >= TimeSpan.FromMilliseconds(AutomaticTrackingResendMilliseconds);
-        if (!targetChanged && !shouldRefreshAutomaticTracking)
-        {
-            return;
-        }
-
-        _hasTrackedTarget = hasTrackedTarget;
-        _yoloObjectId = yoloObjectId;
-        _isUserSelectedTrackId = false;
-
-        if (targetChanged && hasTrackedTarget)
-        {
-            AppendImportantLog($"자동 추적 후보 ID 선택: object {yoloObjectId}");
-        }
-
-        if (!TrySendMotorCommandPacket(out var modeError))
-        {
-            AppendImportantLog($"자동 추적 상태 전송에 실패했습니다: {modeError}");
-            return;
-        }
-
-        if (IsAutoMode)
-        {
-            _lastAutomaticTrackingPacketSentAt = DateTime.Now;
+            if (!TrySendMotorCommandPacket(out var modeError))
+            {
+                AppendImportantLog($"자동 추적 상태 전송에 실패했습니다: {modeError}");
+            }
         }
     }
 
@@ -178,6 +135,11 @@ public sealed partial class MainViewModel
         _yoloObjectId = objectId;
         _isUserSelectedTrackId = true;
 
+        if (!IsTrackingModeEnabled)
+        {
+            IsTrackingModeEnabled = true;
+        }
+
         if (!TrySendMotorCommandPacket(out var error))
         {
             AppendImportantLog($"YOLO 객체 추적 ID 전송에 실패했습니다: {error}");
@@ -189,12 +151,8 @@ public sealed partial class MainViewModel
             _lastAutomaticTrackingPacketSentAt = DateTime.Now;
         }
 
-        var trackingState = IsTrackingModeEnabled ? "tracking=1" : "tracking=0";
-        var trackingNote = IsTrackingModeEnabled
-            ? "선택한 객체 ID를 추적 대상으로 전송했습니다."
-            : "추적 모드가 꺼져 있어 객체 ID는 저장했지만 추적 요청은 비활성 상태로 전송했습니다.";
         AppendImportantLog(
-            $"YOLO 객체 선택: object {objectId}, 위험도 {TranslateThreatLevel(normalizedThreatLevel)}, {trackingState}. {trackingNote}");
+            $"YOLO 객체 선택: object {objectId}, 위험도 {TranslateThreatLevel(normalizedThreatLevel)}, tracking=1. 추적 모드를 켜고 객체 ID를 전송했습니다.");
     }
 
     private bool KeepUserSelectedTrackingTarget(IReadOnlyList<DetectionInfo> detections)

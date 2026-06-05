@@ -533,8 +533,6 @@ public sealed partial class MainViewModel
         _hasTrackedTarget &&
         _yoloObjectId >= 0;
 
-    private readonly record struct TrackingCandidate(int ObjectId, int ThreatWeight, int Order);
-
     private bool SyncMotorRawFromFeedback()
     {
         if (_panMotorFeedbackRaw is not { } panRaw)
@@ -561,11 +559,6 @@ public sealed partial class MainViewModel
             "\uC911\uAC04" => 2,
             _ => 1
         };
-    }
-
-    private static bool IsHighThreatLevel(string threatLevel)
-    {
-        return GetThreatWeight(threatLevel) >= 3;
     }
 
     private static int MotorSpeedToStepDelta(int motorSpeed)
