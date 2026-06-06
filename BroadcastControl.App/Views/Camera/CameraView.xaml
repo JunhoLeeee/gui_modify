@@ -55,6 +55,18 @@
                                         Style="{StaticResource InlineRotateButton}">
                                             <materialDesign:PackIcon Kind="RotateRight" Width="14" Height="14" />
                                         </Button>
+                                        <ToggleButton DockPanel.Dock="Right"
+                                                      Margin="6,0,0,0"
+                                                      IsChecked="{Binding IsIrFalseColorEnabled, Mode=TwoWay}"
+                                                      Visibility="{Binding IsIrLarge, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                      Style="{StaticResource MaterialDesignFlatToggleButton}"
+                                                      Padding="6,2"
+                                                      Height="20"
+                                                      FontSize="11"
+                                                      FontWeight="SemiBold"
+                                                      Content="Color"
+                                                      ToolTip="IR 색상 변환 ON/OFF"
+                                                      Foreground="{DynamicResource PrimaryTextBrush}" />
                                     </DockPanel>
                                 </Border>
 
@@ -158,6 +170,18 @@
                                                     Style="{StaticResource InlineRotateButton}">
                                                         <materialDesign:PackIcon Kind="RotateRight" Width="12" Height="12" />
                                                     </Button>
+                                                    <ToggleButton DockPanel.Dock="Right"
+                                                                  Margin="5,0,0,0"
+                                                                  IsChecked="{Binding IsIrFalseColorEnabled, Mode=TwoWay}"
+                                                                  Visibility="{Binding IsIrInset, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                  Style="{StaticResource MaterialDesignFlatToggleButton}"
+                                                                  Padding="4,1"
+                                                                  Height="18"
+                                                                  FontSize="10"
+                                                                  FontWeight="SemiBold"
+                                                                  Content="Color"
+                                                                  ToolTip="IR 색상 변환 ON/OFF"
+                                                                  Foreground="{DynamicResource PrimaryTextBrush}" />
                                                 </DockPanel>
                                             </Border>
                                         </Grid>

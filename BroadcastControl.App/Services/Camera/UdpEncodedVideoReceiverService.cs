@@ -35,7 +35,7 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
     };
 
     private readonly Dispatcher _dispatcher;
-    private readonly bool _applyIrFalseColor;
+    private volatile bool _applyIrFalseColor;
 
     private UdpClient? _udpClient;
     private CancellationTokenSource? _cancellationTokenSource;
@@ -171,6 +171,11 @@ public sealed class UdpEncodedVideoReceiverService : IDisposable
     public void SetContrast(double value)
     {
         _contrast = Math.Clamp(value, 0, 100);
+    }
+
+    public void SetIrFalseColor(bool enabled)
+    {
+        _applyIrFalseColor = enabled;
     }
 
     public void UpdateViewportTransform(double zoomLevel, double panX, double panY, double viewportWidth, double viewportHeight)

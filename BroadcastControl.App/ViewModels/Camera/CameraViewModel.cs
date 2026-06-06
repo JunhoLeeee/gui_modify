@@ -276,6 +276,24 @@ public sealed partial class MainViewModel
         }
     }
 
+    private bool _isIrFalseColorEnabled = true;
+
+    public bool IsIrFalseColorEnabled
+    {
+        get => _isIrFalseColorEnabled;
+        set
+        {
+            if (SetProperty(ref _isIrFalseColorEnabled, value))
+            {
+                Camera.IrCaptureService.SetIrFalseColor(value);
+            }
+        }
+    }
+
+    public bool IsIrInset => _isEoPrimary;
+
+    public bool IsIrLarge => !_isEoPrimary;
+
     public void UpdateEoFrame(ImageSource? frame)
     {
         _eoFrame = frame;
@@ -377,6 +395,8 @@ public sealed partial class MainViewModel
     {
         _isEoPrimary = !_isEoPrimary;
         OnPropertyChanged(nameof(IsEoPrimary));
+        OnPropertyChanged(nameof(IsIrInset));
+        OnPropertyChanged(nameof(IsIrLarge));
         OnPropertyChanged(nameof(LargeFeedImage));
         OnPropertyChanged(nameof(InsetFeedImage));
         OnPropertyChanged(nameof(LargeFeedTitle));

@@ -544,7 +544,7 @@ namespace BroadcastControl.App
             return "높음";
         }
 
-        if (normalizedClass is "person" or "bicycle" or "cell phone" or "laptop")
+        if (normalizedClass is "bicycle" or "cell phone" or "laptop")
         {
             return "중간";
         }
